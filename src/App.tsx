@@ -1,37 +1,50 @@
 import {Input, ListView, View} from '@ant-design/react-native';
 import React, {useEffect, useRef, useState} from 'react';
-import {Keyboard, Text, TouchableWithoutFeedback} from 'react-native';
+import {
+  Keyboard,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import placesmock from './mock/places.json';
+import {
+  GooglePlaceAutoRespItemParams,
+  GooglePlaceAutoRespParams,
+} from './interface/Common.interface';
 
 const App = () => {
+  const styles = useStyles;
+
   const [placeSearchInput, setPlaceSearchInput] = useState<string>('');
-  const [touuchedPlaceSearchInput, setTouuchedPlaceSearchInput] =
+  const [touchedPlaceSearchInput, setTouchedPlaceSearchInput] =
     useState<boolean>(false);
   const listRef = useRef<any>(null);
 
   const [placesDataSaved, setplacesDataSaved] = useState<string[]>([]);
-  const [placesData, setplacesData] = useState<any>([
-    {
-      description: 'Paris, France',
-      matched_substrings: [{length: 5, offset: 0}],
-      place_id: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
-      reference: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
-      structured_formatting: {
-        main_text: 'Paris',
-        main_text_matched_substrings: [{length: 5, offset: 0}],
-        secondary_text: 'France',
+  const [placesData, setplacesData] = useState<GooglePlaceAutoRespItemParams[]>(
+    [
+      {
+        description: 'Paris, France',
+        matched_substrings: [{length: 5, offset: 0}],
+        place_id: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
+        reference: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
+        structured_formatting: {
+          main_text: 'Paris',
+          main_text_matched_substrings: [{length: 5, offset: 0}],
+          secondary_text: 'France',
+        },
+        terms: [
+          {offset: 0, value: 'Paris'},
+          {offset: 7, value: 'France'},
+        ],
+        types: ['locality', 'political', 'geocode'],
       },
-      terms: [
-        {offset: 0, value: 'Paris'},
-        {offset: 7, value: 'France'},
-      ],
-      types: ['locality', 'political', 'geocode'],
-    },
-  ]);
+    ],
+  );
 
   const callAPISearch = () => {
     console.log('api called');
-    const result = placesmock;
+    const result = placesmock as GooglePlaceAutoRespParams;
 
     if (result.status === 'OK') {
       setplacesData(result.predictions);
@@ -43,29 +56,23 @@ const App = () => {
     listRef?.current?.refresh();
   }, [placesData]);
 
-  useEffect(() => {
-    console.log('touchshow', touuchedPlaceSearchInput);
-  }, [touuchedPlaceSearchInput]);
-
   return (
     <TouchableWithoutFeedback
       onPress={() => {
         Keyboard.dismiss();
-        setTouuchedPlaceSearchInput(false);
+        setTouchedPlaceSearchInput(false);
       }}>
-      <View style={{flex: 1}}>
+      <View style={styles.outerContainer}>
         <Input
           allowClear
-          style={{marginTop: '20%', padding: 20, backgroundColor: 'grey'}}
+          style={styles.placeSearchInput}
           placeholder="Enter place"
           value={placeSearchInput}
           onTouchStart={() => {
-            console.log('touch start');
-            setTouuchedPlaceSearchInput(true);
+            setTouchedPlaceSearchInput(true);
           }}
-          onTouchCancel={() => {
-            console.log('touch cancel');
-            setTouuchedPlaceSearchInput(false);
+          onChange={val => {
+            setTouchedPlaceSearchInput(val?.nativeEvent?.text !== '');
           }}
           onChangeText={v => {
             setPlaceSearchInput(v);
@@ -78,21 +85,18 @@ const App = () => {
           }}
         />
 
-        {touuchedPlaceSearchInput && (
-          <View style={{maxHeight: '50%'}}>
+        {touchedPlaceSearchInput && (
+          <View style={styles.listItemContainer}>
             <ListView
               ref={listRef}
               onFetch={(
                 page = 1,
-                startFetch: (arg0: string[], arg1: number) => void,
+                startFetch: (
+                  arg0: GooglePlaceAutoRespItemParams[],
+                  arg1: number,
+                ) => void,
                 abortFetch: () => void,
               ) => {
-                console.log(
-                  'on fetch',
-                  page,
-                  placesData.length,
-                  listRef?.current?.props?.renderItem?.length,
-                );
                 try {
                   if (
                     page === listRef?.current?.props?.renderItem?.length ||
@@ -106,9 +110,9 @@ const App = () => {
                   abortFetch();
                 }
               }}
-              renderItem={(item: any) => {
+              renderItem={(item: GooglePlaceAutoRespItemParams) => {
                 return (
-                  <View style={{backgroundColor: 'red'}}>
+                  <View style={styles.listItemStyle}>
                     <Text onPress={() => {}}>{item?.description}</Text>
                   </View>
                 );
@@ -120,5 +124,12 @@ const App = () => {
     </TouchableWithoutFeedback>
   );
 };
+
+const useStyles = StyleSheet.create({
+  outerContainer: {flex: 1},
+  placeSearchInput: {marginTop: '20%', padding: 20, backgroundColor: 'grey'},
+  listItemContainer: {maxHeight: '50%'},
+  listItemStyle: {backgroundColor: 'red'},
+});
 
 export default App;
