@@ -6,7 +6,8 @@ import {
   Text,
   TouchableWithoutFeedback,
 } from 'react-native';
-import placesmock from './mock/places.json';
+import placeAutoCompleteMock from './mock/placeAutoComplete.json';
+import placeDetailsMock from './mock/placeDetails.json';
 import {
   GooglePlaceAutoRespItemParams,
   GooglePlaceAutoRespParams,
@@ -25,11 +26,14 @@ const App = () => {
   const placesDataStored = useSelector((state: any) => state.places);
 
   const listRef = useRef<any>(null);
+  const mapRef = useRef<any>(null);
 
   const [placeSearchInput, setPlaceSearchInput] = useState<string>('');
   const [touchedPlaceSearchInput, setTouchedPlaceSearchInput] =
     useState<boolean>(false);
 
+  const [placeLatitude, setPlaceLatitude] = useState<number>(37.78825);
+  const [placeLongitude, setPlaceLongitude] = useState<number>(-122.4324);
   const [placesDataSaved, setplacesDataSaved] = useState<string[]>([]);
   const [placesData, setplacesData] =
     useState<GooglePlaceAutoRespItemParams[]>(placesDataStored);
@@ -44,10 +48,32 @@ const App = () => {
   };
 
   const callAPISearch = () => {
-    const result = placesmock as GooglePlaceAutoRespParams;
+    const result = placeAutoCompleteMock as GooglePlaceAutoRespParams;
 
     if (result.status === 'OK') {
       setplacesData(result.predictions);
+    }
+  };
+
+  const callAPISearchClick = () => {
+    const result = placeDetailsMock;
+
+    if (result.status === 'OK') {
+      const latResult =
+        result.result.geometry.location.lat + placesDataSaved.length / 100;
+      const lonResult =
+        result.result.geometry.location.lng + placesDataSaved.length / 100;
+      setPlaceLatitude(latResult);
+      setPlaceLongitude(lonResult);
+      mapRef.current.animateToRegion(
+        {
+          latitude: latResult,
+          longitude: lonResult,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        },
+        500,
+      );
     }
   };
 
@@ -145,6 +171,7 @@ const App = () => {
                         setPlaceSearchInput(getItemDetail);
                         setTouchedPlaceSearchInput(false);
                         saveSearch(getItemDetail);
+                        callAPISearchClick();
                       }}>
                       {getItemDetail}
                     </Text>
@@ -157,16 +184,17 @@ const App = () => {
         )}
 
         <MapView
+          ref={mapRef}
           style={styles.outerContainer}
           provider={PROVIDER_GOOGLE}
           initialRegion={{
-            latitude: 37.78825,
-            longitude: -122.4324,
+            latitude: placeLatitude,
+            longitude: placeLongitude,
             latitudeDelta: 0.0922,
             longitudeDelta: 0.0421,
           }}>
           <Marker
-            coordinate={{latitude: 37.78825, longitude: -122.4324}}
+            coordinate={{latitude: placeLatitude, longitude: placeLongitude}}
             title="Marker Title"
             description="Marker Description"
           />
