@@ -15,9 +15,10 @@ import {useDispatch, useSelector} from 'react-redux';
 import {addPlaces} from './store/slice';
 import IconClick from './components/IconClick';
 import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const App = () => {
-  //  const insets = useSafeAreaInsets();
+  const {top} = useSafeAreaInsets();
   const styles = useStyles;
 
   const dispatch = useDispatch();
@@ -86,7 +87,7 @@ const App = () => {
     <TouchableWithoutFeedback onPress={dismissClear}>
       <View style={styles.outerContainer}>
         <Input
-          style={styles.placeSearchInputContainer}
+          style={[styles.placeSearchInputContainer, {marginTop: top + 10}]}
           inputStyle={styles.placeSearchInput}
           placeholder="Enter place"
           value={placeSearchInput}
@@ -156,7 +157,7 @@ const App = () => {
         )}
 
         <MapView
-          style={{flex: 1}}
+          style={styles.outerContainer}
           provider={PROVIDER_GOOGLE}
           initialRegion={{
             latitude: 37.78825,
@@ -178,7 +179,6 @@ const App = () => {
 const useStyles = StyleSheet.create({
   outerContainer: {flex: 1},
   placeSearchInputContainer: {
-    // marginTop: '20%',
     padding: 10,
     borderRadius: 100,
     borderWidth: 1,
