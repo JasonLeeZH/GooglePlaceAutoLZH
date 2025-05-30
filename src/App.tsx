@@ -14,8 +14,10 @@ import {
 import {useDispatch, useSelector} from 'react-redux';
 import {addPlaces} from './store/slice';
 import IconClick from './components/IconClick';
+import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 
 const App = () => {
+  //  const insets = useSafeAreaInsets();
   const styles = useStyles;
 
   const dispatch = useDispatch();
@@ -84,7 +86,8 @@ const App = () => {
     <TouchableWithoutFeedback onPress={dismissClear}>
       <View style={styles.outerContainer}>
         <Input
-          style={styles.placeSearchInput}
+          style={styles.placeSearchInputContainer}
+          inputStyle={styles.placeSearchInput}
           placeholder="Enter place"
           value={placeSearchInput}
           onTouchStart={() => {
@@ -106,7 +109,7 @@ const App = () => {
           onSubmitEditing={() => saveSearch()}
         />
 
-        {touchedPlaceSearchInput && (
+        {touchedPlaceSearchInput && placesData.length > 0 && (
           <View style={styles.listItemContainer}>
             <ListView
               ref={listRef}
@@ -151,6 +154,22 @@ const App = () => {
             />
           </View>
         )}
+
+        <MapView
+          style={{flex: 1}}
+          provider={PROVIDER_GOOGLE}
+          initialRegion={{
+            latitude: 37.78825,
+            longitude: -122.4324,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}>
+          <Marker
+            coordinate={{latitude: 37.78825, longitude: -122.4324}}
+            title="Marker Title"
+            description="Marker Description"
+          />
+        </MapView>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -158,7 +177,17 @@ const App = () => {
 
 const useStyles = StyleSheet.create({
   outerContainer: {flex: 1},
-  placeSearchInput: {marginTop: '20%', padding: 20, backgroundColor: 'grey'},
+  placeSearchInputContainer: {
+    // marginTop: '20%',
+    padding: 10,
+    borderRadius: 100,
+    borderWidth: 1,
+    width: '95%',
+    alignSelf: 'center',
+  },
+  placeSearchInput: {
+    padding: 10,
+  },
   iconContainer: {
     flexDirection: 'row',
     gap: 10,

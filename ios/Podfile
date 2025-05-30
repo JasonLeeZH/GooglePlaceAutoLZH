@@ -15,6 +15,14 @@ if linkage != nil
 end
 
 target 'GooglePlaceAutoLZH' do
+  # React Native Maps dependencies
+  # platform :ios, '13.4' 
+
+rn_maps_path = '../node_modules/react-native-maps'
+pod 'react-native-maps/Google', :path => rn_maps_path
+  # pod 'GoogleMaps'
+  # pod 'Google-Maps-iOS-Utils'
+
   config = use_native_modules!
 
   use_react_native!(
