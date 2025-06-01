@@ -2,9 +2,11 @@ import {Input, ListView, View} from '@ant-design/react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {
   Keyboard,
+  NativeSyntheticEvent,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
+  TextInputEndEditingEventData,
+  TouchableOpacity,
 } from 'react-native';
 import placeAutoCompleteMock from './mock/placeAutoComplete.json';
 import placeDetailsMock from './mock/placeDetails.json';
@@ -26,7 +28,7 @@ const App = () => {
   const placesDataStored = useSelector((state: any) => state.places);
 
   const listRef = useRef<any>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapView>(null);
 
   const [placeSearchInput, setPlaceSearchInput] = useState<string>('');
   const [touchedPlaceSearchInput, setTouchedPlaceSearchInput] =
@@ -47,6 +49,9 @@ const App = () => {
     setTouchedPlaceSearchInput(false);
   };
 
+  const touchedSearchWithSaved: boolean =
+    touchedPlaceSearchInput && placesData.length > 0;
+
   const callAPISearch = () => {
     const result = placeAutoCompleteMock as GooglePlaceAutoRespParams;
 
@@ -59,29 +64,31 @@ const App = () => {
     const result = placeDetailsMock;
 
     if (result.status === 'OK') {
+      // Adding up by array length just to show diff place when clicked
       const latResult =
-        result.result.geometry.location.lat + placesDataSaved.length / 100;
+        result?.result?.geometry?.location?.lat + placesDataSaved?.length / 100;
       const lonResult =
-        result.result.geometry.location.lng + placesDataSaved.length / 100;
+        result?.result?.geometry?.location?.lng + placesDataSaved?.length / 100;
+
       setPlaceLatitude(latResult);
       setPlaceLongitude(lonResult);
-      mapRef.current.animateToRegion(
-        {
-          latitude: latResult,
-          longitude: lonResult,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        },
-        500,
-      );
+
+      mapRef.current &&
+        mapRef.current.animateCamera({
+          center: {
+            latitude: latResult,
+            longitude: lonResult,
+          },
+        });
     }
   };
 
   const saveSearch = (extraValue?: string | undefined) => {
-    Keyboard.dismiss();
+    dismissClear();
 
     const valueToAdd =
       extraValue && extraValue !== '' ? extraValue : placeSearchInput;
+
     if (!placesDataSaved.includes(valueToAdd)) {
       dispatch(addPlaces(valueToAdd));
     }
@@ -92,7 +99,16 @@ const App = () => {
     setplacesData(placesDataStored);
   };
 
-  const extraInputButton = () => {
+  const extraInputButtonPrefix = () => {
+    return (
+      <IconClick
+        onPressAction={dismissClear}
+        icon={require('./assets/back.png')}
+      />
+    );
+  };
+
+  const extraInputButtonSuffix = () => {
     return (
       <View style={styles.iconContainer}>
         {placeSearchInput.length > 0 && (
@@ -102,7 +118,7 @@ const App = () => {
           />
         )}
         <IconClick
-          onPressAction={() => saveSearch()}
+          onPressAction={() => placeSearchInput.length > 0 && saveSearch()}
           icon={require('./assets/search.png')}
         />
       </View>
@@ -110,97 +126,131 @@ const App = () => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissClear}>
-      <View style={styles.outerContainer}>
-        <Input
-          style={[styles.placeSearchInputContainer, {marginTop: top + 10}]}
-          inputStyle={styles.placeSearchInput}
-          placeholder="Enter place"
-          value={placeSearchInput}
-          onTouchStart={() => {
-            setTouchedPlaceSearchInput(true);
-          }}
-          onChange={val => {
-            setTouchedPlaceSearchInput(val?.nativeEvent?.text !== '');
-          }}
-          onChangeText={v => {
-            setPlaceSearchInput(v);
-            /^[a-zA-Z0-9_]*$/.test(placeSearchInput) &&
-              v.length > 0 &&
-              callAPISearch();
-          }}
-          onEndEditing={() => {
+    <View style={styles.outerContainer}>
+      <Input
+        style={[styles.placeSearchInputContainer, {marginTop: top + 10}]}
+        inputStyle={styles.placeSearchInput}
+        placeholder="Enter place"
+        value={placeSearchInput}
+        prefix={
+          touchedPlaceSearchInput &&
+          placesData.length > 0 &&
+          extraInputButtonPrefix()
+        }
+        suffix={touchedPlaceSearchInput && extraInputButtonSuffix()}
+        onTouchStart={() => {
+          setTouchedPlaceSearchInput(true);
+        }}
+        onChange={val => {
+          setTouchedPlaceSearchInput(val?.nativeEvent?.text !== '');
+        }}
+        onChangeText={v => {
+          setPlaceSearchInput(v);
+          /^[a-zA-Z0-9_]*$/.test(placeSearchInput) &&
+            v.length > 0 &&
+            callAPISearch();
+        }}
+        onEndEditing={(
+          val: NativeSyntheticEvent<TextInputEndEditingEventData>,
+        ) => {
+          val.nativeEvent.text.length > 0 &&
             setplacesDataSaved([...placesDataSaved, placeSearchInput]);
-          }}
-          suffix={touchedPlaceSearchInput && extraInputButton()}
-          onSubmitEditing={() => saveSearch()}
-        />
+        }}
+        onSubmitEditing={() => saveSearch()}
+      />
 
-        {touchedPlaceSearchInput && placesData.length > 0 && (
-          <View style={styles.listItemContainer}>
-            <ListView
-              ref={listRef}
-              onFetch={(
-                page = 1,
-                startFetch: (
-                  arg0: GooglePlaceAutoRespItemParams[],
-                  arg1: number,
-                ) => void,
-                abortFetch: () => void,
-              ) => {
-                try {
-                  if (
-                    page === listRef?.current?.props?.renderItem?.length ||
-                    listRef?.current?.props?.renderItem?.length === undefined
-                  ) {
-                    startFetch(placesData, 1);
-                  } else {
-                    startFetch([], 1);
-                  }
-                } catch (err) {
-                  abortFetch();
+      {touchedSearchWithSaved && (
+        <View style={styles.outerContainer}>
+          <ListView
+            ref={listRef}
+            onFetch={(
+              page = 1,
+              startFetch: (
+                arg0: GooglePlaceAutoRespItemParams[],
+                arg1: number,
+              ) => void,
+              abortFetch: () => void,
+            ) => {
+              try {
+                if (
+                  page === listRef?.current?.props?.renderItem?.length ||
+                  listRef?.current?.props?.renderItem?.length === undefined
+                ) {
+                  startFetch(placesData, 1);
+                } else {
+                  startFetch([], 1);
                 }
-              }}
-              renderItem={(item: GooglePlaceAutoRespItemParams) => {
-                const getItemDetail = item?.description ?? item;
+              } catch (err) {
+                abortFetch();
+              }
+            }}
+            renderItem={(item: GooglePlaceAutoRespItemParams) => {
+              const getItemMainText =
+                item?.structured_formatting?.main_text ?? item;
+              const getItemDesc =
+                item?.structured_formatting?.secondary_text ?? '';
 
-                return (
+              const mainText = [getItemMainText, getItemDesc].join(' ');
+              const haveDesc = getItemDesc !== '';
+
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    setPlaceSearchInput(mainText);
+                    saveSearch(mainText);
+                    callAPISearch();
+                    callAPISearchClick();
+                  }}>
                   <View style={styles.listItemStyle}>
-                    <Text
-                      onPress={() => {
-                        setPlaceSearchInput(getItemDetail);
-                        setTouchedPlaceSearchInput(false);
-                        saveSearch(getItemDetail);
-                        callAPISearchClick();
-                      }}>
-                      {getItemDetail}
-                    </Text>
+                    <IconClick
+                      onPressAction={clearInput}
+                      icon={require('./assets/map.png')}
+                    />
+                    <View
+                      style={[
+                        styles.listItemTextContainer,
+                        haveDesc && {
+                          justifyContent: 'center',
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                          styles.listItemTitle,
+                          haveDesc && {
+                            fontWeight: 'bold',
+                          },
+                        ]}>
+                        {mainText}
+                      </Text>
+                      <Text style={styles.listItemDesc}>{getItemDesc}</Text>
+                    </View>
                   </View>
-                );
-              }}
-              refreshable={false}
-            />
-          </View>
-        )}
-
-        <MapView
-          ref={mapRef}
-          style={styles.outerContainer}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={{
-            latitude: placeLatitude,
-            longitude: placeLongitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          }}>
-          <Marker
-            coordinate={{latitude: placeLatitude, longitude: placeLongitude}}
-            title="Marker Title"
-            description="Marker Description"
+                </TouchableOpacity>
+              );
+            }}
+            refreshable={false}
+            keyboardShouldPersistTaps={'always'}
           />
-        </MapView>
-      </View>
-    </TouchableWithoutFeedback>
+        </View>
+      )}
+
+      <MapView
+        ref={mapRef}
+        style={!touchedSearchWithSaved && styles.outerContainer}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={{
+          latitude: placeLatitude,
+          longitude: placeLongitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        }}>
+        <Marker
+          coordinate={{latitude: placeLatitude, longitude: placeLongitude}}
+          title="Marker Title"
+          description="Marker Description"
+        />
+      </MapView>
+    </View>
   );
 };
 
@@ -220,9 +270,20 @@ const useStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  icon: {width: 20, height: 20},
-  listItemContainer: {maxHeight: '50%'},
-  listItemStyle: {backgroundColor: 'red'},
+  listItemStyle: {
+    height: 50,
+    padding: 10,
+    flexDirection: 'row',
+  },
+  listItemTextContainer: {
+    marginLeft: 10,
+  },
+  listItemTitle: {
+    fontSize: 16,
+  },
+  listItemDesc: {
+    fontSize: 14,
+  },
 });
 
 export default App;
