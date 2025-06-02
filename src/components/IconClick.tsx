@@ -12,9 +12,11 @@ interface IconClickProps {
 }
 
 const IconClick = (props: IconClickProps) => {
+  const styles = useStyles;
+
   return (
     <TouchableOpacity onPress={props.onPressAction}>
-      <Image style={useStyles.icon} source={props.icon} />
+      <Image style={styles.icon} source={props.icon} />
     </TouchableOpacity>
   );
 };
