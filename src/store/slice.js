@@ -1,4 +1,4 @@
-import {createSlice} from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   placeAutoComplete: [],
@@ -22,7 +22,7 @@ const placesSlice = createSlice({
   },
 });
 
-export const {setPlaceAutoComplete, setPlaceSaved, setPlaceDetails} =
+export const { setPlaceAutoComplete, setPlaceSaved, setPlaceDetails } =
   placesSlice.actions;
 
 export default placesSlice.reducer;

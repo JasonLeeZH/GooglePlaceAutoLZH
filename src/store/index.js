@@ -1,4 +1,4 @@
-import {configureStore} from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
 import rootSaga from './saga';
 import placesReducer from './slice';
 
@@ -9,7 +9,7 @@ const sagaMiddleware = createSagaMiddleware();
 const store = configureStore({
   reducer: placesReducer,
   middleware: getDefaultMiddleware =>
-    getDefaultMiddleware({thunk: false}).concat(sagaMiddleware),
+    getDefaultMiddleware({ thunk: false }).concat(sagaMiddleware),
 });
 
 sagaMiddleware.run(rootSaga);

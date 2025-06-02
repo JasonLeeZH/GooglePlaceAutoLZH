@@ -1,28 +1,29 @@
-import {ListView, View} from '@ant-design/react-native';
-import React, {useEffect, useRef, useState} from 'react';
+import { View } from '@ant-design/react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   NativeSyntheticEvent,
   StyleSheet,
   Text,
   TextInputChangeEventData,
-  TextInputEndEditingEventData,
   TouchableOpacity,
 } from 'react-native';
-import {GooglePlaceAutoRespItemParams} from './interface/Common.interface';
-import {useDispatch, useSelector} from 'react-redux';
+import { GooglePlaceAutoRespItemParams } from './interface/Common.interface';
+import { useDispatch, useSelector } from 'react-redux';
 import IconClick from './components/IconClick';
-import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import MapView from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ADInput from './components/ADInput';
 import {
   setPlaceAutoComplete,
   setPlaceDetails,
   setPlaceSaved,
 } from './store/slice';
+import ADListView from './components/ADListView';
+import RNMapView from './components/RNMap';
 
 const App = () => {
-  const {top} = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
   const styles = useStyles;
 
   const dispatch = useDispatch();
@@ -41,7 +42,6 @@ const App = () => {
 
   const [placeLatitude, setPlaceLatitude] = useState<number>(37.78825);
   const [placeLongitude, setPlaceLongitude] = useState<number>(-122.4324);
-  const [placesDataSaved, setplacesDataSaved] = useState<string[]>([]);
   const [placesData, setplacesData] =
     useState<GooglePlaceAutoRespItemParams[]>(placesSaved);
 
@@ -72,32 +72,32 @@ const App = () => {
     }
   }, [dispatch, placeDetails, placeAutoComplete]);
 
+  const touchedSearchWithSaved: boolean =
+    touchedPlaceSearchInput && placesData?.length > 0;
+
   const dismissClear = () => {
     Keyboard.dismiss();
     setTouchedPlaceSearchInput(false);
   };
 
-  const touchedSearchWithSaved: boolean =
-    touchedPlaceSearchInput && placesData?.length > 0;
+  const clearInput = () => {
+    setPlaceSearchInput('');
+    setplacesData(placesSaved);
+  };
 
-  const saveSearch = (extraValue?: string) => {
+  const saveSearch = (extraValue?: any) => {
     dismissClear();
 
     const valueToAdd =
       extraValue && extraValue !== '' ? extraValue : placeSearchInput;
 
-    if (!placesDataSaved.includes(valueToAdd)) {
+    if (!placesSaved.includes(valueToAdd)) {
       dispatch(setPlaceSaved(valueToAdd));
       dispatch({
         type: 'handlePlaceDetails',
         payload: valueToAdd,
       });
     }
-  };
-
-  const clearInput = () => {
-    setPlaceSearchInput('');
-    setplacesData(placesSaved);
   };
 
   const extraInputButtonPrefix = () => {
@@ -127,7 +127,7 @@ const App = () => {
   };
 
   return (
-    <View style={[styles.outerContainer, {marginTop: top + 10}]}>
+    <View style={[styles.outerContainer, { marginTop: top + 10 }]}>
       <ADInput
         value={placeSearchInput}
         setValue={(v: string) => {
@@ -151,111 +151,76 @@ const App = () => {
         onChange={(val: NativeSyntheticEvent<TextInputChangeEventData>) => {
           setTouchedPlaceSearchInput(val?.nativeEvent?.text !== '');
         }}
-        onEndEditing={(
-          val: NativeSyntheticEvent<TextInputEndEditingEventData>,
-        ) => {
-          val?.nativeEvent?.text.length > 0 &&
-            setplacesDataSaved([...placesDataSaved, placeSearchInput]);
-        }}
         onSubmitEditing={() => saveSearch()}
       />
 
       {touchedSearchWithSaved && (
-        <View style={styles.outerContainer}>
-          <ListView
-            ref={listRef}
-            onFetch={(
-              page = 1,
-              startFetch: (
-                arg0: GooglePlaceAutoRespItemParams[],
-                arg1: number,
-              ) => void,
-              abortFetch: () => void,
-            ) => {
-              try {
-                if (
-                  page === listRef?.current?.props?.renderItem?.length ||
-                  listRef?.current?.props?.renderItem?.length === undefined
-                ) {
-                  startFetch(placesData, 1);
-                } else {
-                  startFetch([], 1);
-                }
-              } catch (err) {
-                abortFetch();
-              }
-            }}
-            renderItem={(item: GooglePlaceAutoRespItemParams) => {
-              const getItemMainText =
-                item?.structured_formatting?.main_text ?? item;
-              const getItemDesc =
-                item?.structured_formatting?.secondary_text ?? '';
+        <ADListView
+          ref={listRef}
+          data={placesData}
+          renderItem={(item: GooglePlaceAutoRespItemParams) => {
+            const getItemMainText =
+              item?.structured_formatting?.main_text ?? item;
+            const getItemDesc =
+              item?.structured_formatting?.secondary_text ?? '';
 
-              const mainText = [getItemMainText, getItemDesc].join(' ');
-              const haveDesc = getItemDesc !== '';
+            const mainText = [getItemMainText, getItemDesc].join(' ');
+            const haveDesc = getItemDesc !== '';
 
-              return (
-                <TouchableOpacity
-                  onPress={() => {
-                    setPlaceSearchInput(mainText);
-                    saveSearch(mainText);
-                  }}>
-                  <View style={styles.listItemStyle}>
-                    <IconClick
-                      onPressAction={clearInput}
-                      icon={require('./assets/map.png')}
-                    />
-                    <View
+            return (
+              <TouchableOpacity
+                onPress={() => {
+                  setPlaceSearchInput(mainText);
+                  saveSearch({
+                    structured_formatting: {
+                      main_text: mainText,
+                      secondary_text: getItemDesc,
+                    },
+                  });
+                }}>
+                <View style={styles.listItemStyle}>
+                  <IconClick icon={require('./assets/map.png')} />
+                  <View
+                    style={[
+                      styles.listItemTextContainer,
+                      haveDesc && {
+                        justifyContent: 'center',
+                      },
+                    ]}>
+                    <Text
                       style={[
-                        styles.listItemTextContainer,
+                        styles.listItemTitle,
                         haveDesc && {
-                          justifyContent: 'center',
+                          fontWeight: 'bold',
                         },
                       ]}>
-                      <Text
-                        style={[
-                          styles.listItemTitle,
-                          haveDesc && {
-                            fontWeight: 'bold',
-                          },
-                        ]}>
-                        {mainText}
-                      </Text>
-                      <Text style={styles.listItemDesc}>{getItemDesc}</Text>
-                    </View>
+                      {mainText}
+                    </Text>
+                    <Text style={styles.listItemDesc}>{getItemDesc}</Text>
                   </View>
-                </TouchableOpacity>
-              );
-            }}
-            refreshable={false}
-            keyboardShouldPersistTaps={'always'}
-          />
-        </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
       )}
 
-      <MapView
+      <RNMapView
         ref={mapRef}
-        style={!touchedSearchWithSaved && styles.outerContainer}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
+        regionData={{
           latitude: placeLatitude,
           longitude: placeLongitude,
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
-        }}>
-        <Marker
-          coordinate={{latitude: placeLatitude, longitude: placeLongitude}}
-          title="Marker Title"
-          description="Marker Description"
-        />
-      </MapView>
+        }}
+        extraStyle={touchedSearchWithSaved && { flex: 'unset' }}
+      />
     </View>
   );
 };
 
 const useStyles = StyleSheet.create({
-  outerContainer: {flex: 1},
-
+  outerContainer: { flex: 1 },
   iconContainer: {
     flexDirection: 'row',
     gap: 10,

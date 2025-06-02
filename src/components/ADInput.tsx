@@ -1,4 +1,4 @@
-import {Input} from '@ant-design/react-native';
+import { Input } from '@ant-design/react-native';
 import React from 'react';
 import {
   GestureResponderEvent,

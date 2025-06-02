@@ -7,22 +7,28 @@ import {
 } from 'react-native';
 
 interface IconClickProps {
-  onPressAction: () => any;
   icon: ImageSourcePropType;
+  onPressAction?: () => void;
 }
 
 const IconClick = (props: IconClickProps) => {
   const styles = useStyles;
 
-  return (
+  const imageBody = () => {
+    return <Image style={styles.icon} source={props.icon} />;
+  };
+
+  return props.onPressAction !== undefined ? (
     <TouchableOpacity onPress={props.onPressAction}>
-      <Image style={styles.icon} source={props.icon} />
+      {imageBody()}
     </TouchableOpacity>
+  ) : (
+    imageBody()
   );
 };
 
 const useStyles = StyleSheet.create({
-  icon: {width: 20, height: 20},
+  icon: { width: 20, height: 20 },
 });
 
 export default IconClick;

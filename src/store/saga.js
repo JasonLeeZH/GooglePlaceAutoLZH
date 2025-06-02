@@ -1,6 +1,6 @@
-import {all, call, put, takeEvery} from 'redux-saga/effects';
-import {placeAutoCompleteMock, placeDetailsMock} from '../mock';
-import {setPlaceAutoComplete, setPlaceDetails} from './slice';
+import { all, call, put, takeEvery } from 'redux-saga/effects';
+import { placeAutoCompleteMock, placeDetailsMock } from '../mock';
+import { setPlaceAutoComplete, setPlaceDetails } from './slice';
 
 const addPlaceSaved = async _payload => {
   try {
