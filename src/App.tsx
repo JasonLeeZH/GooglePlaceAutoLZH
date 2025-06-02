@@ -85,11 +85,10 @@ const App = () => {
     setplacesData(placesSaved);
   };
 
-  const saveSearch = (extraValue?: any) => {
+  const saveSearch = (extraValue?: Partial<GooglePlaceAutoRespItemParams>) => {
     dismissClear();
 
-    const valueToAdd =
-      extraValue && extraValue !== '' ? extraValue : placeSearchInput;
+    const valueToAdd = extraValue ?? placeSearchInput;
 
     if (!placesSaved.includes(valueToAdd)) {
       dispatch(setPlaceSaved(valueToAdd));
@@ -175,6 +174,9 @@ const App = () => {
                     structured_formatting: {
                       main_text: mainText,
                       secondary_text: getItemDesc,
+                      main_text_matched_substrings:
+                        item?.structured_formatting
+                          ?.main_text_matched_substrings ?? [],
                     },
                   });
                 }}>

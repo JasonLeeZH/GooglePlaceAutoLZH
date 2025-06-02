@@ -1,15 +1,6 @@
-import { all, call, put, takeEvery } from 'redux-saga/effects';
+import { all, put, takeEvery } from 'redux-saga/effects';
 import { placeAutoCompleteMock, placeDetailsMock } from '../mock';
 import { setPlaceAutoComplete, setPlaceDetails } from './slice';
-
-const addPlaceSaved = async _payload => {
-  try {
-    const response = placeDetailsMock;
-    return response.data;
-  } catch (error) {
-    throw new Error(error.response.data.message || 'An error occurred');
-  }
-};
 
 function* handlePlaceAutoCompletee(_action) {
   try {
@@ -21,7 +12,7 @@ function* handlePlaceAutoCompletee(_action) {
       yield put(setPlaceAutoComplete([]));
     }
   } catch (error) {
-    yield put(setPlaceAutoComplete(error.message));
+    console.log('err', error);
   }
 }
 
@@ -35,7 +26,7 @@ function* handlePlaceDetails(_action) {
       yield put(setPlaceDetails(null));
     }
   } catch (error) {
-    yield put(setPlaceDetails(error.message));
+    console.log('err', error);
   }
 }
 
