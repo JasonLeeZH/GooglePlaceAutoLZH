@@ -1,31 +1,36 @@
-import {Input, ListView, View} from '@ant-design/react-native';
+import {ListView, View} from '@ant-design/react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {
   Keyboard,
   NativeSyntheticEvent,
   StyleSheet,
   Text,
+  TextInputChangeEventData,
   TextInputEndEditingEventData,
   TouchableOpacity,
 } from 'react-native';
-import placeAutoCompleteMock from './mock/placeAutoComplete.json';
-import placeDetailsMock from './mock/placeDetails.json';
-import {
-  GooglePlaceAutoRespItemParams,
-  GooglePlaceAutoRespParams,
-} from './interface/Common.interface';
+import {GooglePlaceAutoRespItemParams} from './interface/Common.interface';
 import {useDispatch, useSelector} from 'react-redux';
-import {addPlaces} from './store/slice';
 import IconClick from './components/IconClick';
 import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import ADInput from './components/ADInput';
+import {
+  setPlaceAutoComplete,
+  setPlaceDetails,
+  setPlaceSaved,
+} from './store/slice';
 
 const App = () => {
   const {top} = useSafeAreaInsets();
   const styles = useStyles;
 
   const dispatch = useDispatch();
-  const placesDataStored = useSelector((state: any) => state.places);
+  const placeAutoComplete = useSelector(
+    (state: any) => state.placeAutoComplete,
+  );
+  const placesSaved = useSelector((state: any) => state.placesSaved);
+  const placeDetails = useSelector((state: any) => state.placeDetails);
 
   const listRef = useRef<any>(null);
   const mapRef = useRef<MapView>(null);
@@ -38,37 +43,16 @@ const App = () => {
   const [placeLongitude, setPlaceLongitude] = useState<number>(-122.4324);
   const [placesDataSaved, setplacesDataSaved] = useState<string[]>([]);
   const [placesData, setplacesData] =
-    useState<GooglePlaceAutoRespItemParams[]>(placesDataStored);
+    useState<GooglePlaceAutoRespItemParams[]>(placesSaved);
 
   useEffect(() => {
     listRef?.current?.refresh();
   }, [placesData]);
 
-  const dismissClear = () => {
-    Keyboard.dismiss();
-    setTouchedPlaceSearchInput(false);
-  };
-
-  const touchedSearchWithSaved: boolean =
-    touchedPlaceSearchInput && placesData.length > 0;
-
-  const callAPISearch = () => {
-    const result = placeAutoCompleteMock as GooglePlaceAutoRespParams;
-
-    if (result.status === 'OK') {
-      setplacesData(result.predictions);
-    }
-  };
-
-  const callAPISearchClick = () => {
-    const result = placeDetailsMock;
-
-    if (result.status === 'OK') {
-      // Adding up by array length just to show diff place when clicked
-      const latResult =
-        result?.result?.geometry?.location?.lat + placesDataSaved?.length / 100;
-      const lonResult =
-        result?.result?.geometry?.location?.lng + placesDataSaved?.length / 100;
+  useEffect(() => {
+    if (placeDetails !== null) {
+      const latResult = placeDetails?.geometry?.location?.lat;
+      const lonResult = placeDetails?.geometry?.location?.lng;
 
       setPlaceLatitude(latResult);
       setPlaceLongitude(lonResult);
@@ -80,23 +64,40 @@ const App = () => {
             longitude: lonResult,
           },
         });
+
+      dispatch(setPlaceDetails(null));
+    } else if (placeAutoComplete.length !== 0) {
+      setplacesData(placeAutoComplete);
+      dispatch(setPlaceAutoComplete([]));
     }
+  }, [dispatch, placeDetails, placeAutoComplete]);
+
+  const dismissClear = () => {
+    Keyboard.dismiss();
+    setTouchedPlaceSearchInput(false);
   };
 
-  const saveSearch = (extraValue?: string | undefined) => {
+  const touchedSearchWithSaved: boolean =
+    touchedPlaceSearchInput && placesData?.length > 0;
+
+  const saveSearch = (extraValue?: string) => {
     dismissClear();
 
     const valueToAdd =
       extraValue && extraValue !== '' ? extraValue : placeSearchInput;
 
     if (!placesDataSaved.includes(valueToAdd)) {
-      dispatch(addPlaces(valueToAdd));
+      dispatch(setPlaceSaved(valueToAdd));
+      dispatch({
+        type: 'handlePlaceDetails',
+        payload: valueToAdd,
+      });
     }
   };
 
   const clearInput = () => {
     setPlaceSearchInput('');
-    setplacesData(placesDataStored);
+    setplacesData(placesSaved);
   };
 
   const extraInputButtonPrefix = () => {
@@ -126,34 +127,34 @@ const App = () => {
   };
 
   return (
-    <View style={styles.outerContainer}>
-      <Input
-        style={[styles.placeSearchInputContainer, {marginTop: top + 10}]}
-        inputStyle={styles.placeSearchInput}
-        placeholder="Enter place"
+    <View style={[styles.outerContainer, {marginTop: top + 10}]}>
+      <ADInput
         value={placeSearchInput}
+        setValue={(v: string) => {
+          setPlaceSearchInput(v);
+          /^[a-zA-Z0-9_]*$/.test(placeSearchInput) &&
+            v.length > 0 &&
+            dispatch({
+              type: 'handlePlaceAutoComplete',
+              payload: placeSearchInput,
+            });
+        }}
         prefix={
           touchedPlaceSearchInput &&
-          placesData.length > 0 &&
+          placesData?.length > 0 &&
           extraInputButtonPrefix()
         }
         suffix={touchedPlaceSearchInput && extraInputButtonSuffix()}
         onTouchStart={() => {
           setTouchedPlaceSearchInput(true);
         }}
-        onChange={val => {
+        onChange={(val: NativeSyntheticEvent<TextInputChangeEventData>) => {
           setTouchedPlaceSearchInput(val?.nativeEvent?.text !== '');
-        }}
-        onChangeText={v => {
-          setPlaceSearchInput(v);
-          /^[a-zA-Z0-9_]*$/.test(placeSearchInput) &&
-            v.length > 0 &&
-            callAPISearch();
         }}
         onEndEditing={(
           val: NativeSyntheticEvent<TextInputEndEditingEventData>,
         ) => {
-          val.nativeEvent.text.length > 0 &&
+          val?.nativeEvent?.text.length > 0 &&
             setplacesDataSaved([...placesDataSaved, placeSearchInput]);
         }}
         onSubmitEditing={() => saveSearch()}
@@ -198,8 +199,6 @@ const App = () => {
                   onPress={() => {
                     setPlaceSearchInput(mainText);
                     saveSearch(mainText);
-                    callAPISearch();
-                    callAPISearchClick();
                   }}>
                   <View style={styles.listItemStyle}>
                     <IconClick
@@ -256,16 +255,7 @@ const App = () => {
 
 const useStyles = StyleSheet.create({
   outerContainer: {flex: 1},
-  placeSearchInputContainer: {
-    padding: 10,
-    borderRadius: 100,
-    borderWidth: 1,
-    width: '95%',
-    alignSelf: 'center',
-  },
-  placeSearchInput: {
-    padding: 10,
-  },
+
   iconContainer: {
     flexDirection: 'row',
     gap: 10,

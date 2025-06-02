@@ -1,19 +1,28 @@
 import {createSlice} from '@reduxjs/toolkit';
 
 const initialState = {
-  places: [],
+  placeAutoComplete: [],
+  placesSaved: [],
+  placeDetails: null,
 };
 
 const placesSlice = createSlice({
   name: 'places',
   initialState,
   reducers: {
-    addPlaces(state, action) {
-      state.places = [action?.payload, ...state.places];
+    setPlaceAutoComplete(state, action) {
+      state.placeAutoComplete = action.payload;
+    },
+    setPlaceSaved(state, action) {
+      state.placesSaved = [action.payload, ...state.placesSaved];
+    },
+    setPlaceDetails(state, action) {
+      state.placeDetails = action.payload;
     },
   },
 });
 
-export const {addPlaces} = placesSlice.actions;
+export const {setPlaceAutoComplete, setPlaceSaved, setPlaceDetails} =
+  placesSlice.actions;
 
 export default placesSlice.reducer;
